@@ -10,6 +10,7 @@ use Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -27,38 +28,60 @@ class UserController extends Controller
             'KTP' => 'required'
         ]);//validasi registrasi user baru
 
+        $err_message = array(array('Pastikan Semua Field Terisi'));
+        if($checkRequest['namaCustomer'] == 'null' || $checkRequest['namaCustomer'] == null || $checkRequest['alamatCustomer'] == 'null' || $checkRequest['alamatCustomer'] == null || 
+        $checkRequest['tanggalLahirCustomer'] == 'null' || $checkRequest['tanggalLahirCustomer'] == null ||
+        $checkRequest['jenisKelaminCustomer'] == 'null' || $checkRequest['jenisKelaminCustomer'] == null ||
+        $checkRequest['kategoriCustomer'] == 'null' || $checkRequest['kategoriCustomer'] == null || 
+        $checkRequest['noTelpCustomer'] == 'null' || $checkRequest['noTelpCustomer'] == null || 
+        $checkRequest['email'] == 'null' || $checkRequest['email'] == null || 
+        $checkRequest['password'] == 'null' || $checkRequest['password'] == null){
+            return response(['message' => $err_message], 400);
+        }
+
+        if($checkRequest['KTP'] == 'null' || $checkRequest['KTP'] == null){
+            $err_message = array(array('KTP harus terisi'));
+            return response(['message' => $err_message], 400); //return eror invalid input
+        }
+
         if($validate->fails())
             return response(['message' => $validate->errors()], 400); // return error validasi input 
+
+        if(isset($request->KTP)){
+            $KTP = $request->KTP->store('KTP_Customer', ['disk' => 'public']);
+        }
+        if(isset($request->SIM)){
+            $SIM = $request->SIM->store('SIM_Customer', ['disk' => 'public']);
+        }else{
+            $SIM = null;
+        }
+        if(isset($request->KP)){
+            $KP = $request->KP->store('KP_Customer', ['disk' => 'public']);
+        }else{
+            $KP = null;
+        }
         
-        $allCustomer = User::all();
-        $count = count($allCustomer) + 1;
-        $generateNumId = Str::of((string)$count)->padLeft(3, '0');
+        
+        // $allCustomer = User::all();
+        // $count = count($allCustomer) + 1;
+        $last_customer = DB::table('users')->latest('idCustomer')->first();
+        $substr_id = Str::substr((string)$last_customer->idCustomer, 10);
+        $new_id = (int)$substr_id + 1;
+        $generateNumId = Str::of((string)$new_id)->padLeft(3, '0');
 
         $registerDate = Carbon::now()->format('ymd');
         
-        if(!is_null($request->SIM)){
-            $SIM = $request['SIM'];
-        }else{
-            $SIM = NULL;
-        }
+        // if(!is_null($request->SIM)){
+        //     $SIM = $request['SIM'];
+        // }else{
+        //     $SIM = NULL;
+        // }
 
-        if(!is_null($request->KP)){
-            $KP = $request['KP'];
-        }else{
-            $KP = NULL;
-        }
-
-        if(!is_null($request->ratingAJR)){
-            $ratingAJR = $request['ratingAJR'];
-        }else{
-            $ratingAJR = NULL;
-        }
-
-        if(!is_null($request->performaAJR)){
-            $performaAJR = $request['performaAJR'];
-        }else{
-            $performaAJR = NULL;
-        }
+        // if(!is_null($request->KP)){
+        //     $KP = $request['KP'];
+        // }else{
+        //     $KP = NULL;
+        // }
         
         $checkRequest['password'] = Hash::make($request->password);//enkripsi password
         $userData = User::create(['idCustomer' => 'CUS'.$registerDate.'-'.$generateNumId,
@@ -70,11 +93,11 @@ class UserController extends Controller
             'email' => $request['email'],
             'password' =>  $checkRequest['password'],
             'noTelpCustomer' => $request['noTelpCustomer'],
-            'KTP' => $request['KTP'],
+            'KTP' => $KTP,
             'SIM' => $SIM,
             'KP'=> $KP,
-            'ratingAJR' => $ratingAJR,
-            'performaAJR' => $performaAJR,
+            'ratingAJR' => null,
+            'performaAJR' => null,
             'statusBerkas' => 0]); //membuat user baru dengan memanggil model user
         return response([
             'message' => 'Register Success',
