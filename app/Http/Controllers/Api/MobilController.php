@@ -33,6 +33,26 @@ class MobilController extends Controller
         ], 400); //data empty
     }
 
+    public function getAvailableMobil(){
+        $mobil = DB::table('mobils')
+                ->select(DB::raw("*"))
+                ->where('mobils.statusKetersediaanMobil' , '!=', 0)
+                ->get();
+    
+        if(count($mobil)>0){
+            return response([
+                'message' => 'Retrieve All Success',
+                'data' => $mobil
+            ], 200);
+        }//return semua data
+        
+        $err_message = array(array('Empty'));
+        return response([
+            'message' => $err_message,
+            'data' => null
+        ], 400); //data empty
+    }
+
     public function showMobilOnContract(){
         $start = Carbon::now()->format('ymd');
         $mobil = Mobil::selectRaw("*, DATEDIFF(mobils.periodeKontrakAkhir, $start) as diff")

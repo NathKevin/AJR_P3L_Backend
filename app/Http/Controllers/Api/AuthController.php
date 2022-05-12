@@ -27,6 +27,12 @@ class AuthController extends Controller
 
         if(User::where('email', '=', $loginData['email'])->first()){
             $user = User::where('email' , '=', $loginData['email'])->first();
+            if($user['waiting'] == 1){
+                $err_message = array(array('Akun anda masih dalam proses verifikasi'));
+                return response([
+                    'message' => $err_message,
+                ], 400); 
+            }
 
             if(Hash::check($loginData['password'], $user['password'])){
                 $token = Str::random(80);

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Pembayaran;
+use App\Models\Transaksi;
 use Validator; 
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon; //library time
 
 class PembayaranController extends Controller
 {
@@ -41,24 +44,69 @@ class PembayaranController extends Controller
         ], 400);// not Found
     }
 
+    public function showAllByCustomer(Request $request, $idCustomer){
+        $pembayaran = DB::table('pembayarans')
+            ->join('transaksis' , 'transaksis.idPembayaran' , '=', 'pembayarans.idPembayaran')
+            ->select(DB::raw('*'))
+            ->where('transaksis.idCustomer', '=', $idCustomer)
+            ->get();
+
+        if(count($pembayaran)>0){
+            return response([
+                'message' => 'Retrieve Pembayaran by Customer Success',
+                'data' => $pembayaran,
+            ], 200);// Found
+        }
+
+        return response([
+            'message' => 'Transaksi Not Found',
+            'data' => null
+        ], 200);// not Found
+    }
+
+    public function hitungBiaya(Request $request){
+        $start = Carbon::parse($request['tanggalWaktuSewa']);
+        $finish = Carbon::parse($request['tanggalWaktuSelesai']);
+        $day = $start->diffInDays($finish);
+
+        if($request['idDriver'] !== null){
+            $biayaDriver = ($request['hargaSewaDriver'] * $day);
+        }else{
+            $biayaDriver = 0;
+        }
+
+        if($request['idPromo'] !== null){
+            $discount = ($request['besarPromo']);
+        }else{
+            $discount = 0;
+        }
+
+        $biayaMobil = ($request['hargaSewaMobil'] * $day);
+        $biayaKotor = $biayaDriver + $biayaMobil;
+        $totalPromo = $biayaKotor * $discount;
+        $biayaBersih = $biayaKotor - $totalPromo;
+
+        return response([
+            'message' => 'Hitung Biaya Berhasil',
+            'day' => $day,
+            'biayaDriver' => $biayaDriver,
+            'biayaMobil' => $biayaMobil,
+            'biayaKotor' => $biayaKotor,
+            'totalPromo' => $totalPromo,
+            'biayaBersih' => $biayaBersih,
+        ], 200);
+    }
+
     public function create(Request $request){
         $createPembayaran = $request->all();
         $validate = Validator::make($createPembayaran, [
             'idMobil' => 'required',
-            'idPromo' => 'required',
-            'idDriver' => 'required',
-            'metodePembayaran' => 'required|max:30',
-            'totalPromo' => 'required|numeric',
-            'totalBiayaMobil' => 'required|numeric',
-            'totalBiayaDriver' => 'required|numeric',
-            'dendaPeminjaman' => 'required|numeric',
-            'totalBiaya' => 'required|numeric',
-            'statusPembayaran' => 'required'
+            'metodePembayaran' => 'required',
         ]);// validai inputan
 
         if($validate->fails())
             return response(['message' => $validate->errors()], 400);// if validate errors
-        
+    
         $pembayaran = Pembayaran::create($createPembayaran);
         return response([
             'message' => 'Add Pembayaran Success',

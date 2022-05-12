@@ -44,8 +44,30 @@ class TransaksiController extends Controller
         ], 400);// not Found
     }
 
+    public function showTransaksiInProgress(Request $request, $idCustomer){
+        $transaksi = Transaksi::where('idCustomer' , '=', $idCustomer)
+                    ->join('pembayarans', 'pembayarans.idPembayaran', '=', 'transaksis.idPembayaran')
+                    ->where('statusTransaksi', '=', 'Peminjaman Berlangsung')
+                    ->first(); // mencari data berdasarkan id
+
+        if(!is_null($transaksi)){
+            return response([
+                'message' => 'Retrieve Transaksi Success',
+                'data' => $transaksi
+            ], 200);// Found
+        }
+
+        return response([
+            'message' => 'Transaksi Not Found',
+            'data' => null
+        ], 200);// not Found
+    }
+
     public function showAllByCustomer(Request $request, $idCustomer){
-        $transaksi = Transaksi::where('idCustomer', '=', $idCustomer)->get(); // mencari data berdasarkan id
+        $start = Carbon::now()->format('ymd');
+        $transaksi = Transaksi::selectRaw("*, DATEDIFF(transaksis.tanggalWaktuSelesai, $start) as diff")
+            ->where('transaksis.idCustomer', '=', $idCustomer)
+            ->get();
 
         if(count($transaksi)>0){
             return response([
@@ -57,27 +79,25 @@ class TransaksiController extends Controller
         return response([
             'message' => 'Transaksi Not Found',
             'data' => null
-        ], 400);// not Found
+        ], 200);// not Found
     }
 
     public function create(Request $request){
         $createTransaksi = $request->all();
         $validate = Validator::make($createTransaksi, [
-            'idPegawai' => 'required',
             'idCustomer' => 'required',
             'idPembayaran' => 'required',
-            'idDriver' => 'required',
             'tanggalWaktuSewa' => 'required|date',
             'tanggalWaktuSelesai' => 'required|date',
-            'statusTransaksi' => 'required|max:60',
         ]);// validai inputan
 
         if($validate->fails())
             return response(['message' => $validate->errors()], 400);// if validate errors
-        
-        $allTransaksi = Transaksi::all();
-        $count = count($allTransaksi) + 1;
-        $generateNumId = Str::padLeft((string)$count, 3, '0');
+
+        $last_transaksi = DB::table('transaksis')->latest('idTransaksi')->first();
+        $substr_id = Str::substr((string)$last_transaksi->idTransaksi, 12);
+        $new_id = (int)$substr_id + 1;
+        $generateNumId = Str::padLeft((string)$new_id, 3, '0');
 
         $registerDate = Carbon::now()->format('ymd');
         $tanggalTransakasi = Carbon::now();
@@ -98,11 +118,25 @@ class TransaksiController extends Controller
             'tanggalWaktuSewa' => $createTransaksi['tanggalWaktuSewa'],
             'tanggalWaktuSelesai' => $createTransaksi['tanggalWaktuSelesai'],
             'tanggalWaktuKembali' => $createTransaksi['tanggalWaktuKembali'],
-            'statusTransaksi' => $createTransaksi['statusTransaksi'],
+            'statusTransaksi' => 'Peminjaman Berlangsung',
         ]);
         return response([
             'message' => 'Add Transaksi Success',
             'data' => $transaksi
+        ], 200); // return data berupa json
+    }
+
+    public function cekTanggalSewa(Request $request){
+        $data = $request->all();
+        $validate = Validator::make($data, [
+            'tanggalWaktuSelesai' => 'after:tanggalWaktuSewa'
+        ]);// validai inputan
+
+        if($validate->fails())
+            return response(['message' => array(array('Tanggal Sewa Invalid'))], 400);// if validate errors
+        
+        return response([
+            'message' => 'Date Valid',
         ], 200); // return data berupa json
     }
 

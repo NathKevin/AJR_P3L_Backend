@@ -44,7 +44,29 @@ class DriverController extends Controller
         return response([
             'message' => $err_message,
             'data' => null
-        ], 400);// data tidak ditemukan return null
+        ], 200);// data tidak ditemukan return null
+    }
+
+    public function getAvailableDriver(){
+        $driver = DB::table('drivers')
+                ->select(DB::raw("*"))
+                ->where('drivers.statusBerkas' , '!=', 0)
+                ->where('drivers.isActive' , '!=', 0)
+                ->where('drivers.statusKetersediaanDriver' , '!=', 0)
+                ->get();
+    
+        if(count($driver)>0){
+            return response([
+                'message' => 'Retrieve All Success',
+                'data' => $driver
+            ], 200);
+        }//return semua data
+        
+        $err_message = array(array('Empty'));
+        return response([
+            'message' => $err_message,
+            'data' => null
+        ], 400); //data empty
     }
     
     public function create(Request $request){

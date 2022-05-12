@@ -6,17 +6,22 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Promo;
 use Validator; 
+use Carbon\Carbon; //library time
 
 class PromoController extends Controller
 {
     public function index(){
+        $today = Carbon::now()->format('l');
+        $date = Carbon::now()->format('ymd');
         $promo = Promo::all();
         
         $err_message = array(array('Empty'));
         if(count($promo)>0){
             return response([
                 'message' => 'Retrieve All Success',
-                'data' => $promo
+                'data' => $promo,
+                'day' => $today,
+                'date' => $date
             ], 200);
         }//return semua data
    
@@ -35,11 +40,11 @@ class PromoController extends Controller
             ], 200);
         }//return 1 data promo yang ditemukan berdasarkan id
 
-        $err_message = array(array('Driver Not Found'));
+        $err_message = array(array('Promo Not Found'));
         return response([
             'message' => 'Promo Not Found',
             'data' => null
-        ], 400);// data tidak ditemukan return null
+        ], 200);// data tidak ditemukan return null
     }
 
     public function create(Request $request){

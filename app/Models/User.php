@@ -26,7 +26,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'idCustomer', 'namaCustomer', 'alamatCustomer', 'tanggalLahirCustomer', 'jenisKelaminCustomer', 
-        'kategoriCustomer', 'email', 'password', 'noTelpCustomer', 'KTP', 'SIM', 'KP', 'ratingAJR', 'performaAJR', 'api_token', 'statusBerkas'
+        'kategoriCustomer', 'email', 'password', 'noTelpCustomer', 'KTP', 'SIM', 'KP', 'ratingAJR', 'performaAJR', 'api_token', 'statusBerkas', 'waiting'
     ];
 
     /**

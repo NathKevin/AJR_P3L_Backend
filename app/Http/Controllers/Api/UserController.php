@@ -98,7 +98,8 @@ class UserController extends Controller
             'KP'=> $KP,
             'ratingAJR' => null,
             'performaAJR' => null,
-            'statusBerkas' => 0]); //membuat user baru dengan memanggil model user
+            'statusBerkas' => 'Menunggu Verifikasi',
+            'waiting' => 1]); //membuat user baru dengan memanggil model user
         return response([
             'message' => 'Register Success',
             'user' => $userData
@@ -120,30 +121,66 @@ class UserController extends Controller
             'alamatCustomer' => 'required|max:60',
             'tanggalLahirCustomer' => 'required',
             'jenisKelaminCustomer' => 'required',
-            'kategoriCustomer' => 'required',
-            'noTelpCustomer' => 'required|digits_between:10,13|regex:/^((08))/|numeric'
+            'noTelpCustomer' => 'required|digits_between:10,13|regex:/^((08))/|numeric',
         ]);// validasi inputan update user
 
         if($validate->fails())
             return response(['message' => $validate->errors()], 400); //return error invalid input
         
+        if(isset($request->KTP)) {
+            $validateKTP = Validator::make($updateData,[
+                'KTP' => 'max:1024|mimes:jpg,png,jpeg|image'
+            ]);
+
+            if($validateKTP->fails())
+            return response(['message' => $validateKTP->errors()], 400); //return error invalid input
+
+            $KTP = $request->KTP->store('KTP_Customer', ['disk' => 'public']);
+            $user->KTP = $KTP;
+        }
+
+        if(isset($request->SIM)) {
+            $validateSIM = Validator::make($updateData,[
+                'SIM' => 'max:1024|mimes:jpg,png,jpeg|image'
+            ]);
+
+            if($validateSIM->fails())
+            return response(['message' => $validateSIM->errors()], 400); //return error invalid input
+
+            $SIM = $request->SIM->store('SIM_Customer', ['disk' => 'public']);
+            $user->SIM = $SIM;
+        }
+
+        if(isset($request->KP)) {
+            $validateKP = Validator::make($updateData,[
+                'KP' => 'max:1024|mimes:jpg,png,jpeg|image'
+            ]);
+
+            if($validateKP->fails())
+            return response(['message' => $validateKP->errors()], 400); //return error invalid input
+
+            $KP = $request->KP->store('KP_Customer', ['disk' => 'public']);
+            $user->KP = $KP;
+        }
+
         //mengedit timpa data yang lama dengan yang baru
         $user->namaCustomer = $updateData['namaCustomer'];
         $user->alamatCustomer = $updateData['alamatCustomer'];
         $user->tanggalLahirCustomer = $updateData['tanggalLahirCustomer'];
         $user->jenisKelaminCustomer = $updateData['jenisKelaminCustomer'];
-        $user->kategoriCustomer = $updateData['kategoriCustomer'];
         $user->noTelpCustomer = $updateData['noTelpCustomer'];
+        $user->statusBerkas = 'Menunggu Verifikasi';
+        $user->waiting = 1;
 
         if($user->save()){
             return response([
                 'message' => 'Update User Success',
                 'data' => $user
             ], 200);
-        }// return data course yang telah di edit dalam bentuk json
-
+        }
+        $err_message = array(array('Update User Failed'));
         return response([
-            'message' => 'Update User Failed',
+            'message' => $err_message,
             'data' => null
         ], 400); //return message saat course gagal di edit
     }
@@ -196,12 +233,16 @@ class UserController extends Controller
         ]);// validasi inputan update user
 
         if($validate->fails())
-            return response(['message' => $validate->errors()], 400); //return error invalid input
+        return response(['message' => $validate->errors()], 400); //return error invalid input
         
-        $updateData['password'] = Hash::make($request->password);//enkripsi password
-
-        //mengedit timpa data yang lama dengan yang baru
-        $user->password = $updateData['password'];
+        if(Hash::check($updateData['oldPassword'], $user['password'])){
+            $updateData['password'] = Hash::make($request->password);//enkripsi password
+            //mengedit timpa data yang lama dengan yang baru
+            $user->password = $updateData['password'];
+        }else{
+            $err_message = array(array('Password lama tidak sesuai'));
+            return response(['message' => $err_message], 400);
+        }
 
         if($user->save()){
             return response([
@@ -212,6 +253,56 @@ class UserController extends Controller
 
         return response([
             'message' => 'Update Password User Failed',
+            'data' => null
+        ], 400); //return message saat course gagal di edit
+    }
+
+    public function deleteSIM($id){
+        $user = User::where('idCustomer' , '=', $id)->first();
+        if(is_null($user)){
+            return response([
+                'message' => 'user Not Found',
+                'data' => null
+            ], 404);
+        }// data tidak ditemukan
+        
+        //mengedit timpa data yang lama dengan yang baru
+        $user->SIM = null;
+
+        if($user->save()){
+            return response([
+                'message' => 'Delete SIM User Success',
+                'data' => $user
+            ], 200);
+        }// return data  yang telah di edit dalam bentuk json
+
+        return response([
+            'message' => 'Delete SIM User Failed',
+            'data' => null
+        ], 400); //return message saat course gagal di edit
+    }
+
+    public function deleteKP($id){
+        $user = User::where('idCustomer' , '=', $id)->first();
+        if(is_null($user)){
+            return response([
+                'message' => 'user Not Found',
+                'data' => null
+            ], 404);
+        }// data tidak ditemukan
+        
+        //mengedit timpa data yang lama dengan yang baru
+        $user->KP = null;
+
+        if($user->save()){
+            return response([
+                'message' => 'Delete KP User Success',
+                'data' => $user
+            ], 200);
+        }// return data  yang telah di edit dalam bentuk json
+
+        return response([
+            'message' => 'Delete KP User Failed',
             'data' => null
         ], 400); //return message saat course gagal di edit
     }
@@ -231,4 +322,61 @@ class UserController extends Controller
             'data' => null
         ], 400); //return message data tidak ditemukan
     }
+
+    public function index(){
+        $start = Carbon::now()->format('ymd');
+        $user = User::selectRaw("*, DATEDIFF($start, users.created_at) as diff")
+            ->get();
+        
+        if(count($user)>0){
+            return response([
+                'message' => 'Retrieve All Success',
+                'data' => $user
+            ], 200);
+        }//return semua data
+    
+        $err_message = array(array('Empty'));
+        return response([
+            'message' => $err_message,
+            'data' => null
+        ], 400); //data empty
+    }
+
+    public function updateStatus(Request $request, $id){
+        $user = User::where('idCUstomer' , '=', $id)->first(); // mencari data berdasarkan id
+
+        $err_message = array(array('User Not Found'));
+        if(is_null($user)){
+            return response([
+                'message' => $err_message,
+                'data' => null
+            ], 400); //Mobil not Found
+        }
+        
+        $updateUser = $request->all();    
+        $validate = Validator($updateUser, [
+            'statusBerkas' => 'required',
+        ]);// validai inputan 
+
+        if($validate->fails())
+            return response(['message' => $validate->errors()], 400);// if validate errors
+            
+        //menimpa data
+        $user->statusBerkas = $updateUser['statusBerkas'];
+        $user->waiting = 0;
+
+        if($user->save()){
+            return response([
+                'message' => 'Update Status Berkas Success',
+                'data' => $user
+            ], 200);
+        }
+
+        $err_message = array(array('Update Status Berkas Failed'));
+        return response([
+            'message' => $err_message,
+            'data' => null
+        ], 400);
+    }
+
 }

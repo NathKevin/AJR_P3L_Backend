@@ -35,10 +35,12 @@ Route::put('update/pembayaran/{id}','Api\PembayaranController@update');
 //--------------------------------------------------------------------------------------
 //Transaksi(role by CS & Customer)
 Route::get('show/transaksi/{id}','Api\TransaksiController@show');
+Route::get('showInProgress/transaksi/{idC}','Api\TransaksiController@showTransaksiInProgress');
 Route::put('update/transaksi/{id}','Api\TransaksiController@update');
 //--------------------------------------------------------------------------------------
 //Everything about showing data for transaction (mobil,promo)
 Route::get('mobil','Api\MobilController@index');
+Route::get('getAvailableMobil','Api\MobilController@getAvailableMobil');
 Route::get('promo','Api\PromoController@index');
 //--------------------------------------------------------------------------------------
 
@@ -55,19 +57,25 @@ Route::get('show/driver/{id}','Api\DriverController@show');
 Route::group(['middleware' => 'auth:api'], function() {
 });
 //Customer
-Route::put('update/customer/{id}', 'Api\UserController@updateProfile');
+Route::post('update/customer/{id}', 'Api\UserController@updateProfile');
 Route::put('updateEmail/customer/{id}', 'Api\UserController@updateEmail');
+Route::put('deleteSIM/customer/{id}', 'Api\UserController@deleteSIM');
+Route::put('deleteKP/customer/{id}', 'Api\UserController@deleteKP');
 Route::put('updatePassword/customer/{id}', 'Api\UserController@updatePassword');
 Route::get('show/customer/{id}', 'Api\UserController@show');
 //--------------------------------------------------------------------------------------
 //Pembayaran Create
 Route::post('create/pembayaran','Api\PembayaranController@create');
+Route::post('hitungBiaya/pembayaran','Api\PembayaranController@hitungBiaya');
+Route::get('showAllCustomer/pembayaran/{idC}','Api\PembayaranController@showAllByCustomer');
 //--------------------------------------------------------------------------------------
 //Transaksi 
 Route::post('create/transaksi','Api\TransaksiController@create');
+Route::post('cekTanggalSewa/transaksi','Api\TransaksiController@cekTanggalSewa');
 Route::get('showAllCustomer/transaksi/{idC}','Api\TransaksiController@showAllByCustomer');
 Route::put('updateRate/transaksi/{id}','Api\TransaksiController@updateRate');
 //--------------------------------------------------------------------------------------
+Route::get('getAvailableDriver','Api\DriverController@getAvailableDriver');
 
 /**
  * AUTH FOR DRIVER
@@ -162,4 +170,6 @@ Route::get('transaksi','Api\TransaksiController@index');
 Route::get('countCustomer/transaksi','Api\TransaksiController@countCustomer');
 Route::get('countDriver/transaksi','Api\TransaksiController@countDriver'); 
 Route::put('updateStatus/transaksi/{id}','Api\TransaksiController@updateStatus');
+Route::put('updateStatusBerkas/customer/{id}','Api\UserController@updateStatus');
+Route::get('showAll/customer','Api\UserController@index');
 //--------------------------------------------------------------------------------------
